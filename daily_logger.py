@@ -7,6 +7,7 @@ from pydub import AudioSegment
 import os
 import base64
 import json
+import time
 from datetime import datetime
 from dotenv import load_dotenv
 from twilio.rest import Client as TwilioClient
@@ -35,11 +36,17 @@ twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 app = Flask(__name__)
 
 def transcribe_audio(audio_url):
-    r = requests.get(audio_url)
+    for _ in range(3):
+        r = requests.get(audio_url)
+        if r.ok and len(r.content) > 1000:
+            break
+        time.sleep(2)
     with open("temp.wav", "wb") as f:
         f.write(r.content)
+
     sound = AudioSegment.from_file("temp.wav")
     sound.export("temp.mp3", format="mp3")
+
     with open("temp.mp3", "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
     return transcript["text"]
@@ -48,7 +55,6 @@ def transcribe_audio(audio_url):
 def webhook():
     audio_url = request.form["RecordingUrl"] + ".wav"
     yazi = transcribe_audio(audio_url)
-    print("Webhook çalıştı:", yazi)  # DEBUG LOG
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sheet.append_row([now, yazi])
     return "OK", 200
@@ -58,7 +64,7 @@ def trigger_call():
     twilio_client.calls.create(
         to=KULLANICI_PHONE,
         from_=TWILIO_PHONE,
-        url="https://daily-logger-ym66.onrender.com/twiml" # Bunu domaininle değiştir
+        url="https://daily-logger-ym66.onrender.com/twiml"
     )
     return "Arama başlatıldı", 200
 
