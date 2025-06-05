@@ -7,7 +7,6 @@ from pydub import AudioSegment
 import os
 import base64
 import json
-import time
 from datetime import datetime
 from dotenv import load_dotenv
 from twilio.rest import Client as TwilioClient
@@ -35,57 +34,64 @@ twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 # --- APP ---
 app = Flask(__name__)
 
+# --- SESİ YAZIYA ÇEVİR ---
 def transcribe_audio(audio_url):
-    for _ in range(5):
-        r = requests.get(audio_url)
-        if r.ok and len(r.content) > 1000:
-            break
-        time.sleep(2)
-
+    r = requests.get(audio_url)
     with open("temp.wav", "wb") as f:
         f.write(r.content)
-
     try:
-        sound = AudioSegment.from_file("temp.wav")
-        sound.export("temp.mp3", format="mp3")
+        sound = AudioSegment.from_file("temp.wav", format="wav")
     except Exception as e:
-        print("Ses dosyası dönüştürülemedi:", str(e))
+        print("Ses dosyası dönüştürülemedi:", e)
         raise
-
+    sound.export("temp.mp3", format="mp3")
     with open("temp.mp3", "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
     return transcript["text"]
 
+# --- TWILIO WEBHOOK ---
 @app.route("/twilio-webhook", methods=["POST"])
 def webhook():
-    audio_url = request.form["RecordingUrl"] + ".wav"
-    yazi = transcribe_audio(audio_url)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    sheet.append_row([now, yazi])
-    return "OK", 200
+    try:
+        audio_url = request.form["RecordingUrl"] + ".wav"
+        yazi = transcribe_audio(audio_url)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet.append_row([now, yazi])
+        return "OK", 200
+    except Exception as e:
+        print("Webhook hatası:", e)
+        return "Hata", 500
 
+# --- ARAMA TETİKLE ---
 @app.route("/trigger-call", methods=["GET"])
 def trigger_call():
-    twilio_client.calls.create(
-        to=KULLANICI_PHONE,
-        from_=TWILIO_PHONE,
-        url="https://daily-logger-ym66.onrender.com/twiml"  # Domaini kendi URL’inle değiştir
-    )
-    return "Arama başlatıldı", 200
+    try:
+        twilio_client.calls.create(
+            to=KULLANICI_PHONE,
+            from_=TWILIO_PHONE,
+            url="https://daily-logger-ym66.onrender.com/twiml"
+        )
+        return "Arama başlatıldı", 200
+    except Exception as e:
+        print("Arama hatası:", e)
+        return "Arama başlatılamadı", 500
 
+# --- TWIML YANITI ---
 @app.route("/twiml", methods=["POST", "GET"])
 def twiml():
     return """
     <Response>
-        <Say voice="alice" language="tr-TR">Günlük notlarınızı konuşabilirsiniz. Kayıt başladı.</Say>
-        <Record timeout="5" maxLength="60" action="/twilio-webhook" method="POST" />
-        <Say>Kayıt sona erdi. Güle güle.</Say>
+        <Say voice="max" language="tr-TR">Hi sir,How is your day going.</Say>
+        <Record timeout="5" maxLength="60" finishOnKey="#" action="/twilio-webhook" method="POST" />
+        <Say>End of the record bye.</Say>
     </Response>
     """, 200, {"Content-Type": "application/xml"}
 
+# --- ANA SAYFA ---
 @app.route("/", methods=["GET"])
 def home():
     return "Daily Logger aktif", 200
 
+# --- BAŞLAT ---
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
