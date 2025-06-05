@@ -1,8 +1,3 @@
-# daily_logger.py
-
-# Sistem: GPT destekli sesli kontrol ve loglama sistemi
-# Gerekli modüller: Flask, Twilio, openai, pydub, gspread, oauth2client, dotenv
-
 from flask import Flask, request
 import openai
 import requests
@@ -31,11 +26,14 @@ creds_json = base64.b64decode(os.getenv("GOOGLE_CREDENTIALS_B64")).decode("utf-8
 creds_dict = json.loads(creds_json)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
-print([sheet['name'] for sheet in client.list_spreadsheet_files()])
 sheet = client.open("Gunluk_takip").sheet1
 
 # Uygulama başlat
 app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return "Daily Logger aktif ✅"
 
 # --- SESİ YAZIYA ÇEVİR ---
 def transcribe_audio(audio_url):
