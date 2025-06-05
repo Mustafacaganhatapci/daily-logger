@@ -1,5 +1,3 @@
-# daily_logger.py
-
 from flask import Flask, request
 import openai
 import requests
@@ -59,7 +57,7 @@ def trigger_call():
     twilio_client.calls.create(
         to=KULLANICI_PHONE,
         from_=TWILIO_PHONE,
-        url="https://YOUR_DOMAIN/twiml"
+        url="https://YOUR_DOMAIN/twiml"  # Bunu domaininle değiştir
     )
     return "Arama başlatıldı", 200
 
@@ -72,6 +70,10 @@ def twiml():
         <Say>Kayıt sona erdi. Güle güle.</Say>
     </Response>
     """, 200, {"Content-Type": "application/xml"}
+
+@app.route("/", methods=["GET"])
+def home():
+    return "Daily Logger aktif", 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
