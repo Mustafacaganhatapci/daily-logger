@@ -24,7 +24,12 @@ creds_json = base64.b64decode(os.getenv("GOOGLE_CREDENTIALS_B64")).decode("utf-8
 creds_dict = json.loads(creds_json)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
-sheet = client.open("Gunluk_takip").sheet1
+
+try:
+    sheet = client.open("Gunluk_takip").sheet1
+except Exception as e:
+    print("Google Sheet bağlantı hatası:", e)
+    raise
 
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -50,10 +55,14 @@ def transcribe_audio(audio_url):
 @app.route("/twilio-webhook", methods=["POST"])
 def webhook():
     try:
-        audio_url = request.form["RecordingUrl"]
+        audio_url = request.form["RecordingUrl"] + ".wav"
         yazi = transcribe_audio(audio_url)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sheet.append_row([now, yazi])
+        try:
+            sheet.append_row([now, yazi])
+        except Exception as e:
+            print("Google Sheet'e yazma hatası:", e)
+            raise
         return "OK", 200
     except Exception as e:
         print("Webhook hatası:", e)
