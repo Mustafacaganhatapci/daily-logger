@@ -36,16 +36,21 @@ twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 app = Flask(__name__)
 
 def transcribe_audio(audio_url):
-    for _ in range(3):
+    for _ in range(5):
         r = requests.get(audio_url)
         if r.ok and len(r.content) > 1000:
             break
         time.sleep(2)
+
     with open("temp.wav", "wb") as f:
         f.write(r.content)
 
-    sound = AudioSegment.from_file("temp.wav")
-    sound.export("temp.mp3", format="mp3")
+    try:
+        sound = AudioSegment.from_file("temp.wav")
+        sound.export("temp.mp3", format="mp3")
+    except Exception as e:
+        print("Ses dosyası dönüştürülemedi:", str(e))
+        raise
 
     with open("temp.mp3", "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
@@ -64,7 +69,7 @@ def trigger_call():
     twilio_client.calls.create(
         to=KULLANICI_PHONE,
         from_=TWILIO_PHONE,
-        url="https://daily-logger-ym66.onrender.com/twiml"
+        url="https://daily-logger-ym66.onrender.com/twiml"  # Domaini kendi URL’inle değiştir
     )
     return "Arama başlatıldı", 200
 
@@ -72,9 +77,9 @@ def trigger_call():
 def twiml():
     return """
     <Response>
-        <Say voice="alice" language="en-EN">Hello, how is your day going?</Say>
-        <Record timeout="5" maxLength="20" action="/twilio-webhook" method="POST" />
-        <Say>Kayıt sona erdi. bye.</Say>
+        <Say voice="alice" language="tr-TR">Günlük notlarınızı konuşabilirsiniz. Kayıt başladı.</Say>
+        <Record timeout="5" maxLength="60" action="/twilio-webhook" method="POST" />
+        <Say>Kayıt sona erdi. Güle güle.</Say>
     </Response>
     """, 200, {"Content-Type": "application/xml"}
 
