@@ -48,6 +48,7 @@ def transcribe_audio(audio_url):
 def webhook():
     audio_url = request.form["RecordingUrl"] + ".wav"
     yazi = transcribe_audio(audio_url)
+    print("Webhook çalıştı:", yazi)  # DEBUG LOG
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sheet.append_row([now, yazi])
     return "OK", 200
