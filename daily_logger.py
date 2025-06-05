@@ -73,8 +73,8 @@ def twiml():
     return """
     <Response>
         <Say voice="alice" language="en-EN">Hello, how is your day going?</Say>
-        <Record timeout="5" maxLength="60" action="/twilio-webhook" method="POST" />
-        <Say>Kayıt sona erdi. Güle güle.</Say>
+        <Record timeout="5" maxLength="20" action="/twilio-webhook" method="POST" />
+        <Say>Kayıt sona erdi. bye.</Say>
     </Response>
     """, 200, {"Content-Type": "application/xml"}
 
