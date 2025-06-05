@@ -37,9 +37,8 @@ app = Flask(__name__)
 # --- SESİ YAZIYA ÇEVİR ---
 def transcribe_audio(audio_url):
     try:
-        print("Recording URL:", audio_url)
         r = requests.get(audio_url)
-        with tempfile.NamedTemporaryFile(delete=False) as temp_audio:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
             temp_audio.write(r.content)
             temp_audio_path = temp_audio.name
 
@@ -57,7 +56,14 @@ def transcribe_audio(audio_url):
 @app.route("/twilio-webhook", methods=["POST"])
 def webhook():
     try:
-        audio_url = request.form["RecordingUrl"]
+        recording_url = request.form.get("RecordingUrl")
+        if not recording_url:
+            print("Recording URL eksik.")
+            return "Eksik veri", 400
+
+        audio_url = recording_url + ".mp3"
+        print("Recording URL:", audio_url)
+
         yazi = transcribe_audio(audio_url)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([now, yazi])
@@ -85,9 +91,10 @@ def trigger_call():
 def twiml():
     return """
     <Response>
-        <Say voice="max" language="tr-TR">Hi sir,How is your day going.</Say>
+        <Say voice="Polly.Cem" language="tr-TR">Günün nasıl geçti?</Say>
         <Record timeout="5" maxLength="60" finishOnKey="#" action="/twilio-webhook" method="POST" />
-        <Say>End of the record bye.</Say>
+        <Say>Görüşme sona erdi.</Say>
+        <Hangup/>
     </Response>
     """, 200, {"Content-Type": "application/xml"}
 
