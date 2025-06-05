@@ -13,12 +13,14 @@ import tempfile
 
 load_dotenv()
 
+# --- API KEYLER ---
 openai.api_key = os.getenv("OPENAI_API_KEY")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_PHONE = os.getenv("TWILIO_PHONE")
 KULLANICI_PHONE = os.getenv("KULLANICI_PHONE")
 
+# --- GOOGLE SHEET ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds_json = base64.b64decode(os.getenv("GOOGLE_CREDENTIALS_B64")).decode("utf-8")
 creds_dict = json.loads(creds_json)
@@ -26,14 +28,17 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("Gunluk_takip").sheet1
 
+# --- TWILIO ---
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
+# --- FLASK APP ---
 app = Flask(__name__)
 
+# --- SESİ YAZIYA ÇEVİR ---
 def transcribe_audio(audio_url):
     try:
         r = requests.get(audio_url)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
             temp_audio.write(r.content)
             temp_audio_path = temp_audio.name
 
@@ -47,10 +52,11 @@ def transcribe_audio(audio_url):
         print("Ses dönüştürme hatası:", e)
         raise
 
+# --- TWILIO WEBHOOK ---
 @app.route("/twilio-webhook", methods=["POST"])
 def webhook():
     try:
-        audio_url = request.form["RecordingUrl"] + ".mp3"
+        audio_url = request.form["RecordingUrl"] + ".wav"
         yazi = transcribe_audio(audio_url)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([now, yazi])
@@ -59,6 +65,7 @@ def webhook():
         print("Webhook hatası:", e)
         return "Hata", 500
 
+# --- ARAMA TETİKLE ---
 @app.route("/trigger-call", methods=["GET"])
 def trigger_call():
     try:
@@ -72,6 +79,7 @@ def trigger_call():
         print("Arama hatası:", e)
         return "Arama başlatılamadı", 500
 
+# --- TWIML YANITI ---
 @app.route("/twiml", methods=["POST", "GET"])
 def twiml():
     return """
@@ -82,9 +90,11 @@ def twiml():
     </Response>
     """, 200, {"Content-Type": "application/xml"}
 
+# --- ANA SAYFA ---
 @app.route("/", methods=["GET"])
 def home():
     return "Daily Logger aktif", 200
 
+# --- BAŞLAT ---
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
