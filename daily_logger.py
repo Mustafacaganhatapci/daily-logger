@@ -37,9 +37,20 @@ app = Flask(__name__)
 # --- SESİ YAZIYA ÇEVİR ---
 def transcribe_audio(audio_url):
     try:
-        print("Recording URL:", audio_url)
         r = requests.get(audio_url)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+        content_type = r.headers.get("Content-Type", "")
+        ext = {
+            "audio/mpeg": ".mp3",
+            "audio/mp3": ".mp3",
+            "audio/wav": ".wav",
+            "audio/x-wav": ".wav",
+            "audio/webm": ".webm",
+            "audio/ogg": ".ogg",
+            "audio/mp4": ".mp4",
+            "audio/x-m4a": ".m4a",
+        }.get(content_type, ".mp3")
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_audio:
             temp_audio.write(r.content)
             temp_audio_path = temp_audio.name
 
