@@ -1,4 +1,3 @@
-
 from flask import Flask, request
 import openai
 import requests
@@ -10,6 +9,7 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 from twilio.rest import Client as TwilioClient
+import tempfile
 
 load_dotenv()
 
@@ -38,11 +38,16 @@ app = Flask(__name__)
 def transcribe_audio(audio_url):
     try:
         r = requests.get(audio_url)
-        with open("temp.mp3", "wb") as f:
-            f.write(r.content)
-        with open("temp.mp3", "rb") as audio_file:
-            transcript = openai.Audio.transcribe("whisper-1", audio_file)
-        return transcript["text"]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+            temp_audio.write(r.content)
+            temp_audio_path = temp_audio.name
+
+        with open(temp_audio_path, "rb") as audio_file:
+            transcript = openai.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+        return transcript.text
     except Exception as e:
         print("Ses dönüştürme hatası:", e)
         raise
@@ -83,7 +88,6 @@ def twiml():
         <Record timeout="5" maxLength="60" finishOnKey="#" action="/twilio-webhook" method="POST" />
         <Say>End of the record bye.</Say>
     </Response>
-    
     """, 200, {"Content-Type": "application/xml"}
 
 # --- ANA SAYFA ---
