@@ -1,9 +1,9 @@
+
 from flask import Flask, request
 import openai
 import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from pydub import AudioSegment
 import os
 import base64
 import json
@@ -36,24 +36,22 @@ app = Flask(__name__)
 
 # --- SESİ YAZIYA ÇEVİR ---
 def transcribe_audio(audio_url):
-    r = requests.get(audio_url)
-    with open("temp.wav", "wb") as f:
-        f.write(r.content)
     try:
-        sound = AudioSegment.from_file("temp.wav", format="wav")
+        r = requests.get(audio_url)
+        with open("temp.mp3", "wb") as f:
+            f.write(r.content)
+        with open("temp.mp3", "rb") as audio_file:
+            transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        return transcript["text"]
     except Exception as e:
-        print("Ses dosyası dönüştürülemedi:", e)
+        print("Ses dönüştürme hatası:", e)
         raise
-    sound.export("temp.mp3", format="mp3")
-    with open("temp.mp3", "rb") as audio_file:
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    return transcript["text"]
 
 # --- TWILIO WEBHOOK ---
 @app.route("/twilio-webhook", methods=["POST"])
 def webhook():
     try:
-        audio_url = request.form["RecordingUrl"] + ".wav"
+        audio_url = request.form["RecordingUrl"] + ".mp3"
         yazi = transcribe_audio(audio_url)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet.append_row([now, yazi])
@@ -85,6 +83,7 @@ def twiml():
         <Record timeout="5" maxLength="60" finishOnKey="#" action="/twilio-webhook" method="POST" />
         <Say>End of the record bye.</Say>
     </Response>
+    
     """, 200, {"Content-Type": "application/xml"}
 
 # --- ANA SAYFA ---
