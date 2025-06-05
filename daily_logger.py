@@ -72,7 +72,7 @@ def trigger_call():
 def twiml():
     return """
     <Response>
-        <Say voice="alice" language="tr-TR">Günlük notlarınızı konuşabilirsiniz. Kayıt başladı.</Say>
+        <Say voice="alice" language="en-EN">Hello, how is your day going?</Say>
         <Record timeout="5" maxLength="60" action="/twilio-webhook" method="POST" />
         <Say>Kayıt sona erdi. Güle güle.</Say>
     </Response>
