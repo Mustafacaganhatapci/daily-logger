@@ -57,7 +57,7 @@ def trigger_call():
     twilio_client.calls.create(
         to=KULLANICI_PHONE,
         from_=TWILIO_PHONE,
-        url="https://YOUR_DOMAIN/twiml"  # Bunu domaininle değiştir
+        url="https://daily-logger-ym66.onrender.com/twiml" # Bunu domaininle değiştir
     )
     return "Arama başlatıldı", 200
 
